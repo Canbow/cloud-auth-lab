@@ -12,27 +12,27 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
+	"golang.org/x/oauth2/github"
 )
 
 var (
 	db               *sql.DB
 	oauthCfg         *oauth2.Config
-	oauthStateString = "random-cryptographic-state-string" // Protects against CSRF
+	oauthStateString = "random-cryptographic-state-string"
 )
 
-// Initialize Google OAuth Configuration
+// Initialize GitHub OAuth Configuration
 func initOAuth() {
 	oauthCfg = &oauth2.Config{
-		RedirectURL:  "http://localhost:8080/callback", // IMPORTANT: Change to http://YOUR_EC2_IP:8080/callback when deploying
-		ClientID:     "YOUR_GOOGLE_CLIENT_ID",          // Get this from Google Cloud Console
-		ClientSecret: "YOUR_GOOGLE_CLIENT_SECRET",      // Get this from Google Cloud Console
-		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email"},
-		Endpoint:     google.Endpoint,
+		RedirectURL:  "http://localhost:8080/callback",
+		ClientID:     "YOUR_GITHUB_CLIENT_ID",     // Paste your GitHub Client ID here
+		ClientSecret: "YOUR_GITHUB_CLIENT_SECRET", // Paste your GitHub Client Secret here
+		Scopes:       []string{"read:user"},
+		Endpoint:     github.Endpoint,
 	}
 }
 
-// Updated UI Template with Google Button and Divider
+// UI Template with GitHub Button
 const uiTemplate = `
 <!DOCTYPE html>
 <html lang="en">
@@ -44,19 +44,19 @@ const uiTemplate = `
         body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 100vh; display: flex; align-items: center; justify-content: center; color: #333; }
         .card { background: rgba(255, 255, 255, 0.95); padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 400px; text-align: center; }
         h2 { margin-top: 0; color: #4a4a4a; }
-        input { width: 100%; padding: 12px 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; transition: border-color 0.3s; }
-        input:focus { outline: none; border-color: #667eea; }
-        button { width: 100%; padding: 12px; background: #667eea; border: none; border-radius: 8px; color: white; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.3s; margin-top: 10px; }
+        input { width: 100%; padding: 12px 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 12px; background: #667eea; border: none; border-radius: 8px; color: white; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         button:hover { background: #5a6cd6; }
         
-        /* New Styles for Google Button & Divider */
         .divider { display: flex; align-items: center; text-align: center; margin: 20px 0; color: #aaa; font-size: 14px;}
         .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #ddd; }
         .divider:not(:empty)::before { margin-right: .5em; }
         .divider:not(:empty)::after { margin-left: .5em; }
-        .google-btn { background: #fff; color: #444; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; text-decoration: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.3s; padding: 10px; width: 100%; box-sizing: border-box;}
-        .google-btn img { width: 20px; margin-right: 10px; }
-        .google-btn:hover { background: #f9f9f9; }
+        
+        /* GitHub Button Styling */
+        .github-btn { background: #24292e; color: #fff; border: none; display: flex; align-items: center; justify-content: center; text-decoration: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.3s; padding: 12px; width: 100%; box-sizing: border-box;}
+        .github-btn svg { width: 20px; fill: white; margin-right: 10px; }
+        .github-btn:hover { background: #000; }
 
         .message { margin-top: 15px; font-weight: bold; color: #e74c3c; }
         .success { color: #2ecc71; }
@@ -75,9 +75,10 @@ const uiTemplate = `
         </form>
 
         <div class="divider">OR</div>
-        <a href="/login/google" class="google-btn">
-            <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google Logo">
-            Continue with Google
+        
+        <a href="/login/github" class="github-btn">
+            <svg viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            Continue with GitHub
         </a>
 
         {{if .Message}}
@@ -127,7 +128,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	renderUI(w, PageData{})
 }
 
-// ---------------- LOCAL AUTH LOGIC ----------------
+// Local Auth Handler (remains unchanged)
 func authHandler(w http.ResponseWriter, r *http.Request, isSignup bool) {
 	if r.Method != "POST" {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -156,28 +157,27 @@ func authHandler(w http.ResponseWriter, r *http.Request, isSignup bool) {
 	}
 }
 
-// ---------------- GOOGLE SSO LOGIC ----------------
-func handleGoogleLogin(w http.ResponseWriter, r *http.Request) {
+// ---------------- GITHUB SSO LOGIC ----------------
+func handleGitHubLogin(w http.ResponseWriter, r *http.Request) {
 	url := oauthCfg.AuthCodeURL(oauthStateString)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
-	// Verify state string to prevent cross-site request forgery
+func handleGitHubCallback(w http.ResponseWriter, r *http.Request) {
 	if r.FormValue("state") != oauthStateString {
 		renderUI(w, PageData{Message: "Invalid state. Possible CSRF attack.", Success: false})
 		return
 	}
 
-	// Exchange the Authorization Code for an Access Token
 	token, err := oauthCfg.Exchange(context.Background(), r.FormValue("code"))
 	if err != nil {
 		renderUI(w, PageData{Message: "Failed to exchange token.", Success: false})
 		return
 	}
 
-	// Use token to fetch user email from Google APIs
-	response, err := http.Get("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + token.AccessToken)
+	// Use the authenticated client to fetch the user's GitHub profile
+	client := oauthCfg.Client(context.Background(), token)
+	response, err := client.Get("https://api.github.com/user")
 	if err != nil {
 		renderUI(w, PageData{Message: "Failed to get user info.", Success: false})
 		return
@@ -185,15 +185,14 @@ func handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	defer response.Body.Close()
 
 	var userInfo struct {
-		Email string `json:"email"`
+		Login string `json:"login"`
 	}
 	json.NewDecoder(response.Body).Decode(&userInfo)
 
-	// Save the Google user in the SQLite database (using INSERT OR IGNORE so it doesn't fail if they already exist)
-	// We insert 'GOOGLE_SSO' instead of a password hash since they don't have a local password.
-	db.Exec(`INSERT OR IGNORE INTO users(username, password_hash) VALUES (?, 'GOOGLE_SSO')`, userInfo.Email)
+	// Save the GitHub username in the SQLite database
+	db.Exec(`INSERT OR IGNORE INTO users(username, password_hash) VALUES (?, 'GITHUB_SSO')`, userInfo.Login)
 
-	renderUI(w, PageData{Message: fmt.Sprintf("Welcome, %s! Logged in via Google.", userInfo.Email), Success: true})
+	renderUI(w, PageData{Message: fmt.Sprintf("Welcome, %s! Logged in via GitHub.", userInfo.Login), Success: true})
 }
 
 func main() {
@@ -209,14 +208,12 @@ func main() {
 	initOAuth()
 
 	http.HandleFunc("/", indexHandler)
-
-	// Local Routes
 	http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) { authHandler(w, r, true) })
 	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) { authHandler(w, r, false) })
 
-	// Google Routes
-	http.HandleFunc("/login/google", handleGoogleLogin)
-	http.HandleFunc("/callback", handleGoogleCallback)
+	// GitHub Routes
+	http.HandleFunc("/login/github", handleGitHubLogin)
+	http.HandleFunc("/callback", handleGitHubCallback)
 
 	fmt.Println("Secure UI Server running on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
